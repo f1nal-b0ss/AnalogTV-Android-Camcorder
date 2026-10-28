@@ -1,22 +1,32 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.retro.analogtv
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+import kotlin.math.sin
+import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,6 +45,14 @@ fun LiveCamcorderScreen() {
     var isRecording by remember { mutableStateOf(false) }
     var stompScramble by remember { mutableStateOf(false) }
     var stompImpulse by remember { mutableStateOf(false) }
+    var frameTick by remember { mutableStateOf(0L) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(33L)
+            frameTick += 1L
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -72,6 +90,123 @@ fun LiveCamcorderScreen() {
                 )
             ) {
                 Text(if (isRecording) "⏹ STOP TAPE" else "● REC CAMCORDER")
+            }
+        }
+
+        // Live CRT / VHS Camcorder Viewfinder Monitor
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .border(2.dp, Color(0xFF2A2E3D), RoundedCornerShape(10.dp))
+                .background(Color.Black, RoundedCornerShape(10.dp))
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val w = size.width
+                val h = size.height
+                val t = frameTick * 0.05f
+
+                // SMPTE Color Bars + VHS Chroma Smear Simulation
+                val barColors = listOf(
+                    Color(0xFFC0C0C0),
+                    Color(0xFFC0C000),
+                    Color(0xFF00C0C0),
+                    Color(0xFF00C000),
+                    Color(0xFFC000C0),
+                    Color(0xFFC00000),
+                    Color(0xFF0000C0)
+                )
+                val barW = w / barColors.size
+                val flagOffset = sin(t * 4f) * params.flagging * 24f
+
+                barColors.forEachIndexed { idx, baseColor ->
+                    val xShift = if (stompScramble) sin(t * 8f + idx) * 30f else flagOffset
+                    drawRect(
+                        color = if (params.standard == 3) Color.Gray else baseColor,
+                        topLeft = Offset((idx * barW + xShift).coerceIn(0f, w), 0f),
+                        size = Size(barW + (params.chromaBleed * 18f), h)
+                    )
+                }
+
+                // Pause / Tracking Azimuth Noise Bar
+                if (params.pauseBar > 0.01f) {
+                    val barY = h * params.tracking.coerceIn(0.15f, 0.85f)
+                    drawRect(
+                        color = Color.White.copy(alpha = 0.65f),
+                        topLeft = Offset(0f, barY - 14f),
+                        size = Size(w, 28f)
+                    )
+                }
+
+                // VHS Oxide Dropouts & FM Tape Noise
+                val noiseCount = (params.tapeNoise * 45 + (if (stompImpulse) 40 else 0)).toInt()
+                for (i in 0 until noiseCount) {
+                    val nx = Random.nextFloat() * w
+                    val ny = Random.nextFloat() * h
+                    val nw = 8f + Random.nextFloat() * 48f
+                    drawRect(
+                        color = Color.White.copy(alpha = 0.55f),
+                        topLeft = Offset(nx, ny),
+                        size = Size(nw, 2.5f)
+                    )
+                }
+
+                // CRT Horizontal Scanlines
+                val stepY = 6f
+                var y = 0f
+                while (y < h) {
+                    drawRect(
+                        color = Color.Black.copy(alpha = 0.25f + params.scanlines * 0.35f),
+                        topLeft = Offset(0f, y),
+                        size = Size(w, 2f)
+                    )
+                    y += stepY
+                }
+            }
+
+            // On-Screen Display (MB88303 Camcorder Character Generator)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = if (isRecording) "REC ● ${params.tapeSpeedMode}" else "PLAY ▶ ${params.tapeSpeedMode}",
+                        color = Color(0xFF4ADE80),
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = "ZOOM ${"%.1f".format(params.zoomRatio)}X",
+                        color = Color(0xFF4ADE80),
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 14.sp
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = params.presetName.uppercase(),
+                        color = Color(0xFFFFB300),
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 13.sp
+                    )
+                    Text(
+                        text = "${params.osdTitle}  TC 00:00:${"%02d".format((frameTick / 30) % 60)}",
+                        color = Color(0xFF4ADE80),
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
             }
         }
 

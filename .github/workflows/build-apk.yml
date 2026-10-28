@@ -7,10 +7,11 @@ on:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
   build-apk:
@@ -20,25 +21,35 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK Licenses & Configure SDK 34
+        run: |
+          ANDROID_SDK_DIR="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          mkdir -p "$ANDROID_SDK_DIR/licenses"
+          printf "\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n84831b9409646a918e30573bab4c9c91346d8abd\n" > "$ANDROID_SDK_DIR/licenses/android-sdk-license"
+          printf "\n84831b9409646a918e30573bab4c9c91346d8abd\n504667f4c0de7af1a06de9f4b1727b84351f2910\n" > "$ANDROID_SDK_DIR/licenses/android-sdk-preview-license"
+          printf "\n601085b94cd77f0b54ff86406957099ebe79c4d6\n" > "$ANDROID_SDK_DIR/licenses/android-googletv-license"
+          printf "\n33b6a2b64607f11b759f320ef9dff4ae5c47d97a\n" > "$ANDROID_SDK_DIR/licenses/google-gdk-license"
+          SDKMANAGER=$(find "$ANDROID_SDK_DIR/cmdline-tools" -name sdkmanager 2>/dev/null | sort -V | tail -n 1)
+          if [ -n "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+            "$SDKMANAGER" --install "platforms;android-34" "build-tools;34.0.0" > /dev/null 2>&1 || true
+          fi
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+      - name: Setup Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
 
-      - name: Build Debug & Release Unsigned APKs
-        run: gradle assembleDebug assembleRelease --no-daemon
+      - name: Build Debug APK
+        run: gradle assembleDebug --no-daemon --stacktrace
 
-      - name: Rename APK for Release
-        run: |
-          cp app/build/outputs/apk/debug/app-debug.apk AnalogTV-Camcorder-v3.0-debug.apk
+      - name: Prepare APK for Download
+        run: cp app/build/outputs/apk/debug/app-debug.apk AnalogTV-Camcorder-v3.0-debug.apk
 
       - name: Upload Compiled APK Artifact
         uses: actions/upload-artifact@v4
@@ -46,31 +57,12 @@ jobs:
           name: AnalogTV-Camcorder-v3.0-APK
           path: AnalogTV-Camcorder-v3.0-debug.apk
 
-      - name: Publish GitHub Release on Push to Main
+      - name: Publish GitHub Release on Push
         if: github.event_name == 'push'
+        continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v3.0.${{ github.run_number }}
-          name: "AnalogTV 3.0 Camcorder for Android (Build #${{ github.run_number }})"
-          body: "Automated build of the AnalogTV 3.0 Live VHS Camcorder & Composite Signal Simulator for Android."
+          name: "AnalogTV 3.0 Camcorder for Android Build #${{ github.run_number }}"
+          body: "Automated Android APK build of AnalogTV 3.0 Live VHS Camcorder."
           files: AnalogTV-Camcorder-v3.0-debug.apk
-
-  deploy-pages:
-    needs: build-apk
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-      - name: Upload Pages Artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: './docs'
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4

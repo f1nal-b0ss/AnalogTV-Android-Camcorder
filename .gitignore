@@ -7,3 +7,4 @@ build/
 app/build/
 captures/
 analog_tv_android_studio.zip
+deploy_github_page.bat

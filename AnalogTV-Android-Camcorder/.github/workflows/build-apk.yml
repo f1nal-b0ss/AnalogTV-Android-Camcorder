@@ -1,0 +1,76 @@
+name: Build & Release Android Camcorder APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
+      - name: Build Debug & Release Unsigned APKs
+        run: gradle assembleDebug assembleRelease --no-daemon
+
+      - name: Rename APK for Release
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk AnalogTV-Camcorder-v3.0-debug.apk
+
+      - name: Upload Compiled APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AnalogTV-Camcorder-v3.0-APK
+          path: AnalogTV-Camcorder-v3.0-debug.apk
+
+      - name: Publish GitHub Release on Push to Main
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v3.0.${{ github.run_number }}
+          name: "AnalogTV 3.0 Camcorder for Android (Build #${{ github.run_number }})"
+          body: "Automated build of the AnalogTV 3.0 Live VHS Camcorder & Composite Signal Simulator for Android."
+          files: AnalogTV-Camcorder-v3.0-debug.apk
+
+  deploy-pages:
+    needs: build-apk
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './docs'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

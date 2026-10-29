@@ -11,8 +11,8 @@ android {
         applicationId = "com.retro.analogtv"
         minSdk = 26
         targetSdk = 34
-        versionCode = 301
-        versionName = "3.0.1-camcorder"
+        versionCode = 320
+        versionName = "3.2.0-authentic-vhs"
     }
 
     buildFeatures {
@@ -39,14 +39,12 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.2")
 
-    // CameraX for Live Camcorder Viewfinder & Zoom/Torch Control
     val cameraxVersion = "1.3.4"
     implementation("androidx.camera:camera-core:$cameraxVersion")
     implementation("androidx.camera:camera-camera2:$cameraxVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-view:$cameraxVersion")
 
-    // Media3 ExoPlayer + Transformer for Gallery Video Conversion
     val media3Version = "1.4.1"
     implementation("androidx.media3:media3-exoplayer:$media3Version")
     implementation("androidx.media3:media3-ui:$media3Version")

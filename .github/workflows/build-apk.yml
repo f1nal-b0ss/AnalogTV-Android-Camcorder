@@ -41,10 +41,25 @@ jobs:
         run: gradle assembleDebug assembleRelease --no-daemon --stacktrace
 
       - name: Package APK for Download
-        run: cp app/build/outputs/apk/debug/app-debug.apk AnalogTV-Camcorder-v3.0-debug.apk
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk AnalogTV-Camcorder-v3.2-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk AnalogTV-Camcorder-v3.0-debug.apk
 
       - name: Upload Compiled APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AnalogTV-Camcorder-v3.0-APK
-          path: AnalogTV-Camcorder-v3.0-debug.apk
+          name: AnalogTV-Camcorder-v3.2-APK
+          path: |
+            AnalogTV-Camcorder-v3.2-debug.apk
+            AnalogTV-Camcorder-v3.0-debug.apk
+
+      - name: Publish GitHub Release with Latest APK
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v3.2.${{ github.run_number }}
+          name: "AnalogTV 3.2 Authentic VHS Camcorder APK (Build #${{ github.run_number }})"
+          body: "Automated Android APK build featuring the updated v3.2 Authentic YIQ / 629 kHz Colour-Under / 1H Delay-Line Comb Filter / Quasi-Rigid H-Sync TBC VHS pipeline and Live CameraX OpenGL ES 3.0 Viewfinder."
+          files: |
+            AnalogTV-Camcorder-v3.2-debug.apk
+            AnalogTV-Camcorder-v3.0-debug.apk

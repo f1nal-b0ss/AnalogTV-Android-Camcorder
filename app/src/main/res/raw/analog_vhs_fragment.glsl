@@ -3,29 +3,28 @@
 precision highp float;
 
 uniform samplerExternalOES uCameraTex;
-uniform sampler2D uPrevLagTex; // Ping-pong FBO for Vidicon camera tube persistence
 uniform float uTime;
 uniform vec2 uResolution;
-uniform float uZoom;           // Camcorder optical/digital zoom (1.0 .. 4.0)
+uniform float uZoom;
 
-// Signal & VHS Parameters (AnalogTV 3.0 Pipeline)
+// Authentic AnalogTV 3.2 VHS & Broadcast Signal Parameters
 uniform int uStandard;         // 0 = NTSC, 1 = PAL, 2 = SECAM, 3 = Mono 405
-uniform float uChromaBleed;    // VHS 629kHz colour-under lowpass smearing (0..1)
-uniform float uTapeNoise;      // FM noise triangle & snow (0..1)
-uniform float uFlagging;       // Top-of-frame H-PLL tension bend (0..1)
+uniform float uChromaBleed;    // 629 kHz colour-under Gaussian LPF + 1H comb filter
+uniform float uTapeNoise;      // FM noise + multi-pixel horizontal white/black dropouts
+uniform float uFlagging;       // Top-of-frame exponential H-PLL skew pull-in
 uniform float uTracking;       // Head-switch & pause noise bar position (0..1)
-uniform float uPauseBar;       // 1.0 when paused / searching (FM azimuth noise bar)
-uniform float uMainsHum;       // 0 = Off, 1 = 50Hz, 2 = 60Hz hum bar amplitude
-uniform float uTubeLag;        // Vidicon / Orthicon temporal persistence (0..0.92)
-uniform float uTubeReg;        // 3-tube camera R/B prism registration offset
-uniform float uGhosting;       // RF multipath echo strength
-uniform float uCurvature;      // CRT barrel distortion
-uniform float uScanlines;      // CRT scanline & shadow mask intensity
+uniform float uPauseBar;       // Stationary helical-scan drum azimuth bar
+uniform float uMainsHum;       // 50/60 Hz AC power supply hum bar
+uniform float uTubeLag;        // Vidicon highlight persistence / glow
+uniform float uTubeReg;        // 3-tube camera R/B registration offset + edge ringing
+uniform float uGhosting;       // RF multipath ghost + per-line TBC H-sync jitter
+uniform float uCurvature;      // CRT barrel curvature
+uniform float uScanlines;      // CRT aperture grille & scanlines
 
-// AnalogCam Live Stompbox Pedals
-uniform float uStompScramble;  // SSAVI sinusoidal H-oscillator hunt + polarity invert
-uniform float uStompImpulse;   // Broadband RF ignition spikes
-uniform float uDegaussPhase;   // 1.8s PTC coil tangential Lorentz swirl
+// AnalogCam Stompbox Pedals
+uniform float uStompScramble;  // SSAVI scrambler
+uniform float uStompImpulse;   // Ignition spark impulse noise
+uniform float uDegaussPhase;   // PTC coil degauss swirl
 
 in vec2 vTexCoord;
 out vec4 fragColor;
@@ -53,7 +52,6 @@ vec3 yiq2rgb(vec3 yiq) {
 }
 
 void main() {
-    // 1. CRT Barrel Distortion & Camcorder Zoom Rocker
     vec2 uv = vTexCoord * 2.0 - 1.0;
     float r2 = dot(uv, uv);
     uv *= 1.0 + uCurvature * r2;
@@ -65,116 +63,110 @@ void main() {
 
     float lines = (uStandard == 1 || uStandard == 2) ? 625.0 : (uStandard == 3 ? 405.0 : 525.0);
     float scanY = floor(tc.y * lines);
+    float fieldId = floor(uTime * 30.0);
+    vec2 px = 1.0 / max(uResolution, vec2(320.0, 240.0));
 
-    // 2. Flagging + SSAVI Scrambler + Capstan Wow/Flutter + Head-Switch Tear
-    float topDecay = exp(-tc.y * 8.5);
-    float flagShift = uFlagging * 0.045 * topDecay * sin(uTime * 14.0 + tc.y * 6.0);
-    float ssaviWave = uStompScramble * 0.065 * sin(tc.y * 22.0 + uTime * 11.0);
-    float flutter = 0.0018 * uChromaBleed * sin(tc.y * 45.0 + uTime * 7.5);
-    float headSwitch = step(0.965, tc.y) * (0.025 * sin(uTime * 30.0 + tc.y * 200.0));
-    tc.x = fract(tc.x + flagShift + ssaviWave + flutter + headSwitch);
+    // 1. Quasi-rigid scanline geometry: exponential top flagging + discrete per-line H-sync jitter (NO wavy sine distortion)
+    float topDecay = exp(-tc.y * 14.0);
+    float flagTear = uFlagging * 0.018 * topDecay * (0.65 + 0.35 * (hash12(vec2(fieldId, 1.0)) - 0.5));
+    float lineNoise = (hash12(vec2(scanY, fieldId)) - 0.5) * 2.0;
+    float adjLineNoise = (hash12(vec2(scanY - 1.0, fieldId)) - 0.5) * 2.0;
+    float hSyncJitter = (0.65 * lineNoise + 0.35 * adjLineNoise) * (0.00025 + uGhosting * 0.0018);
 
-    // 3. Camera Tube Registration & Vidicon Temporal Lag
-    float regOffset = uTubeReg * 0.008;
-    float rSample = texture(uCameraTex, tc + vec2(regOffset, -regOffset * 0.4)).r;
-    float gSample = texture(uCameraTex, tc).g;
-    float bSample = texture(uCameraTex, tc - vec2(regOffset, regOffset * 0.4)).b;
-    vec3 prevLag = texture(uPrevLagTex, vTexCoord).rgb;
-    vec3 tubeRgb = max(vec3(rSample, gSample, bSample), prevLag * uTubeLag);
+    // 2. Bottom 6-scanline rotary head-switching point (exponential PLL pull-in)
+    float hsStart = 0.968 - 0.015 * abs(uTracking - 0.5);
+    float hsEnv = step(hsStart, tc.y) * exp(-(tc.y - hsStart) * 55.0);
+    float headSwitchPull = hsEnv * (0.016 + 0.025 * abs(uTracking - 0.5)) * (0.8 + 0.2 * hash12(vec2(scanY, fieldId)));
 
-    // 4. Composite Encode/Decode & VHS Colour-Under Chroma Smear (~400 kHz lowpass)
-    vec3 yiq = rgb2yiq(tubeRgb);
-    float luma = yiq.x;
+    float ssaviShift = uStompScramble * 0.045 * step(0.5, hash12(vec2(floor(scanY * 0.12), fieldId)));
+    tc.x = clamp(tc.x + flagTear + hSyncJitter + headSwitchPull + ssaviShift, 0.001, 0.999);
 
-    if (uGhosting > 0.01) {
-        vec3 ghostRgb = texture(uCameraTex, clamp(tc - vec2(0.035, 0.0), 0.0, 1.0)).rgb;
-        vec3 ghostYiq = rgb2yiq(ghostRgb);
-        luma = mix(luma, luma + ghostYiq.x * 0.35, uGhosting);
+    // 3. Camera tube registration + luma pre-emphasis ringing (crisp dark-then-bright right edge halo)
+    float regShift = uTubeReg * 0.004;
+    vec3 centerRgb = vec3(
+        texture(uCameraTex, tc + vec2(regShift, 0.0)).r,
+        texture(uCameraTex, tc).g,
+        texture(uCameraTex, tc - vec2(regShift, 0.0)).b
+    );
+    vec3 yiqCenter = rgb2yiq(centerRgb);
+    float yLeft  = dot(texture(uCameraTex, clamp(tc - vec2(px.x * 1.5, 0.0), 0.0, 1.0)).rgb, vec3(0.299, 0.587, 0.114));
+    float yLeft2 = dot(texture(uCameraTex, clamp(tc - vec2(px.x * 3.5, 0.0), 0.0, 1.0)).rgb, vec3(0.299, 0.587, 0.114));
+    float yRight = dot(texture(uCameraTex, clamp(tc + vec2(px.x * 1.5, 0.0), 0.0, 1.0)).rgb, vec3(0.299, 0.587, 0.114));
+
+    float lumaBlur = 0.50 * yiqCenter.x + 0.25 * yLeft + 0.25 * yRight;
+    float edgeStep = yiqCenter.x - yLeft;
+    float overshoot = (yLeft - yLeft2) * 0.38 - edgeStep * 0.45;
+    float luma = clamp(lumaBlur + overshoot * (0.25 + uTubeLag * 0.45), 0.0, 1.0);
+
+    // 4. VHS 629 kHz Colour-Under 9-tap Gaussian LPF + 1H Delay Line Comb Filter
+    float chromaDelay = (0.0025 + uChromaBleed * 0.0065);
+    float chromaStep  = (0.0012 + uChromaBleed * 0.0032);
+    vec2 iqCurr = vec2(0.0);
+    vec2 iqPrevLine = vec2(0.0);
+    float wSum = 0.0;
+    for (int k = -4; k <= 4; k++) {
+        float fk = float(k);
+        float w = exp(-0.18 * fk * fk);
+        vec2 cUv = clamp(vec2(tc.x - chromaDelay + fk * chromaStep, tc.y), 0.0, 1.0);
+        vec2 pUv = clamp(vec2(tc.x - chromaDelay + fk * chromaStep, tc.y - px.y * 2.0), 0.0, 1.0);
+        iqCurr += rgb2yiq(texture(uCameraTex, cUv).rgb).yz * w;
+        iqPrevLine += rgb2yiq(texture(uCameraTex, pUv).rgb).yz * w;
+        wSum += w;
     }
+    vec2 chroma = 0.55 * (iqCurr / wSum) + 0.45 * (iqPrevLine / wSum);
 
-    vec2 iqAccum = vec2(0.0);
-    float weightSum = 0.0;
-    float spread = (0.002 + uChromaBleed * 0.016);
-    for (int i = 0; i < 9; i++) {
-        float w = exp(-float(i) * 0.35);
-        vec2 sampleUv = clamp(tc - vec2(float(i) * spread / 9.0, 0.0), 0.0, 1.0);
-        vec3 sYiq = rgb2yiq(texture(uCameraTex, sampleUv).rgb);
-        iqAccum += sYiq.yz * w;
-        weightSum += w;
-    }
-    vec2 chroma = iqAccum / weightSum;
+    // Subcarrier dot crawl on sharp chroma transitions
+    float chromaEdge = length(chroma - yiqCenter.yz);
+    float subPhase = tc.x * 340.0 + scanY * 3.14159 + fieldId * 1.57;
+    luma += chromaEdge * 0.22 * sin(subPhase);
 
-    // Subcarrier Dot Crawl
-    float chromaEdge = length(chroma - yiq.yz);
-    float subPhase = tc.x * 320.0 + scanY * 3.14159 + uTime * 18.0;
-    luma += chromaEdge * 0.35 * sin(subPhase);
-
-    if (uStandard == 1) {
-        float alt = mod(scanY, 2.0) * 2.0 - 1.0;
-        chroma.y *= (1.0 + 0.18 * alt * uChromaBleed);
-    } else if (uStandard == 2) {
-        float fire = chromaEdge * sin(tc.x * 90.0 + uTime * 20.0);
-        chroma.x += fire * 0.45;
-    } else if (uStandard == 3) {
+    if (uStandard == 3) {
         chroma = vec2(0.0);
     }
 
-    // SSAVI Field Polarity Inversion
-    if (uStompScramble > 0.5 && mod(floor(uTime * 15.0), 2.0) < 1.0) {
-        luma = 1.0 - luma;
-        chroma = -chroma * 1.3;
+    // 5. High-frequency FM luma grain + horizontal oxide dropout streaks with exponential tail
+    float fmGrain = (hash12(vec2(floor(tc.x * 360.0), scanY + fieldId * 17.0)) - 0.5) * uTapeNoise * 0.14;
+    luma += fmGrain;
+
+    float segX = floor(tc.x * 24.0);
+    float dropSeed = hash12(vec2(segX, scanY + fieldId * 31.0));
+    float dropThresh = 1.0 - (uTapeNoise * 0.008 + uStompImpulse * 0.035);
+    if (dropSeed > dropThresh) {
+        float segFrac = fract(tc.x * 24.0);
+        float dropEnv = exp(-segFrac * 3.5);
+        luma = mix(luma, 0.95, dropEnv);
+        chroma *= (1.0 - dropEnv);
     }
 
-    // 5. FM Tape Noise Triangle + Impulse Spikes + Oxide Dropouts
-    float n = hash12(vec2(tc.x * 480.0 + uTime * 13.7, scanY));
-    luma += (n - 0.5) * uTapeNoise * (0.4 + 0.6 * luma);
-
-    float dropSeed = hash12(vec2(floor(tc.x * 18.0), scanY + floor(uTime * 24.0) * 19.0));
-    if (dropSeed > (1.0 - (uTapeNoise * 0.018 + uStompImpulse * 0.04))) {
-        luma = 0.96;
-        chroma = vec2(0.0);
+    // Head-switch bright FM phase spike on bottom 2 lines
+    if (hsEnv > 0.25) {
+        float hsSpike = hash12(vec2(floor(tc.x * 180.0), scanY + fieldId)) * hsEnv * 0.45;
+        luma = clamp(luma + hsSpike, 0.0, 1.0);
     }
 
     // 6. Pause / Search Helical-Scan Azimuth Noise Bar
     if (uPauseBar > 0.01) {
         float barCenter = mix(0.18, 0.82, uTracking);
-        float barMask = smoothstep(0.08, 0.01, abs(tc.y - barCenter)) * uPauseBar;
+        float barMask = smoothstep(0.075, 0.01, abs(tc.y - barCenter)) * uPauseBar;
         if (barMask > 0.01) {
-            float barNoise = hash12(vec2(tc.x * 300.0, scanY + uTime * 50.0));
-            luma = mix(luma, barNoise, barMask * 0.88);
+            float barNoise = hash12(vec2(floor(tc.x * 260.0), scanY + fieldId * 13.0));
+            luma = mix(luma, barNoise, barMask * 0.85);
             chroma *= (1.0 - barMask);
         }
     }
 
-    // 7. Mains Hum Bars (50/60 Hz beat roll)
+    // 7. Mains Hum Bar
     if (uMainsHum > 0.01) {
-        luma += sin(tc.y * 6.28318 * 1.5 - uTime * 2.4) * 0.08 * uMainsHum;
+        luma += sin(tc.y * 6.28318 - uTime * 2.2) * 0.06 * uMainsHum;
     }
 
+    // 8. Tape black pedestal lift & highlight knee compression
+    luma = clamp(0.035 + luma * 0.93, 0.035, 0.97);
     vec3 outRgb = yiq2rgb(vec3(luma, chroma));
 
-    // 8. Degauss Coil Triad Swirl
-    if (uDegaussPhase > 0.01) {
-        float d = length(uv);
-        float angle = sin(d * 16.0 - uDegaussPhase * 14.0) * uDegaussPhase * 2.5;
-        float ca = cos(angle);
-        float sa = sin(angle);
-        outRgb = abs(vec3(
-            outRgb.r * ca - outRgb.g * sa,
-            outRgb.g * ca + outRgb.b * sa,
-            outRgb.b * ca - outRgb.r * sa
-        ));
-    }
-
-    // 9. CRT Scanlines & Aperture Grille
-    float scanlineMask = 1.0 - uScanlines * 0.35 * (0.5 - 0.5 * cos(tc.y * lines * 6.28318));
-    float triad = mod(floor(tc.x * uResolution.x), 3.0);
-    vec3 phosphorMask = vec3(
-        triad == 0.0 ? 1.08 : 0.92,
-        triad == 1.0 ? 1.08 : 0.92,
-        triad == 2.0 ? 1.08 : 0.92
-    );
-    outRgb *= scanlineMask * mix(vec3(1.0), phosphorMask, uScanlines * 0.5);
+    // 9. Subtle CRT scanline & triad mask
+    float scanlineMask = 1.0 - uScanlines * 0.22 * (0.5 - 0.5 * cos(tc.y * lines * 6.28318));
+    outRgb *= scanlineMask;
 
     fragColor = vec4(outRgb, 1.0);
 }

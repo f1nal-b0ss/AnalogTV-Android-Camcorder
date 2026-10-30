@@ -1,0 +1,65 @@
+name: Build and Release Android Camcorder APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Accept Android SDK Licenses
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+      - name: Install Android SDK Platform 34 and Build Tools
+        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Build Debug and Release Unsigned APKs
+        run: gradle assembleDebug assembleRelease --no-daemon --stacktrace
+
+      - name: Package APK for Download
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk AnalogTV-Camcorder-v3.3-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk AnalogTV-Camcorder-v3.0-debug.apk
+
+      - name: Upload Compiled APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AnalogTV-Camcorder-v3.3-APK
+          path: |
+            AnalogTV-Camcorder-v3.3-debug.apk
+            AnalogTV-Camcorder-v3.0-debug.apk
+
+      - name: Publish GitHub Release with Latest APK
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v3.3.${{ github.run_number }}
+          name: "AnalogTV 3.3 Full Studio Camcorder APK (Build #${{ github.run_number }})"
+          body: "Automated Android APK build (v3.3.0) with 90-degree upright camera fix, full 5-tab hardware rack, 10 One-Tap Looks, punchy CRT/YIQ/629kHz shader, single-line red REC button, and built-in MP4 video recording, playback, and Gallery export."
+          files: |
+            AnalogTV-Camcorder-v3.3-debug.apk
+            AnalogTV-Camcorder-v3.0-debug.apk
